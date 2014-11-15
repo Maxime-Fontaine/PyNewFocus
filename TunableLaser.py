@@ -2,10 +2,15 @@
 
 class TunableLaser():
     '''
-    This class allows to remote control the Tunable Laser Source of New Focus
+    This class allows to remote control the Tunable Laser Source (TLS) of New Focus
     '''
 
     def __init__(self, ComPort=0, Simulation=False):
+        '''
+        Constructor of AP1000 equipment.
+        ComPort is the COM port number (integer) of the Laser.
+        Simulation is a boolean to indicate to the program if it has to run in simulation mode or not
+        '''
         self.ComPort = ComPort
         self.Simulation = Simulation
         if self.Simulation:
@@ -29,6 +34,10 @@ class TunableLaser():
 
 
     def Open(self):
+        '''
+        Open connexion to New Focus TLS equipment.
+        This method is called by the constructor of TunableLaser class
+        '''
         import serial, sys
         
         try:
@@ -43,6 +52,9 @@ class TunableLaser():
 
 
     def Close(self, Error=False):
+        '''
+        Close connexion to New Focus TLS equipment
+        '''
         if not self.Simulation:
             if not Error:
                 self.Lock()
@@ -50,6 +62,9 @@ class TunableLaser():
 
 
     def Send(self, Command):
+        '''
+        Send a string Command to the TLS equipment (ending character must be \'\n')
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE, NF_ERROR_COMMUNICATION
         from PyNewFocus.Errors import NFError
         
@@ -65,7 +80,11 @@ class TunableLaser():
                 raise NFError(NF_ERROR_COMMUNICATION, "Command")
 
 
-    def Receive(self, ByteNumber=1204):
+    def Receive(self, ByteNumber=1024):
+        '''
+        Receive a string from the TLS equipment
+        ByteNumber is an integer (default to 1024) representing the number of bytes to receive
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE, NF_ERROR_BADCOMMAND
         from PyNewFocus.Errors import NFError
         
@@ -84,6 +103,10 @@ class TunableLaser():
 
 
     def ConvertToLog(self, LinearPower):
+        '''
+        Return a converted logaritmic power (dBm) from a linear one (mW)
+        LinearPower is the mW power to convert
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE
         from PyNewFocus.Errors import NFError
         from math import log10 as log
@@ -98,6 +121,10 @@ class TunableLaser():
 
 
     def ConvertToLin(self, LogPower):
+        '''
+        Return a converted linear power (mW) from a logaritmic one (dBm)
+        LogPower is the dBm power to convert
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE
         from PyNewFocus.Errors import NFError
         
@@ -111,6 +138,10 @@ class TunableLaser():
 
 
     def SetWavelength(self, Wavelength):
+        '''
+        Set wavelength of the New Focus TLS equipment
+        Wavelength is expressed in nm
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE, NF_TLS_WLMIN, NF_TLS_WLMAX
         from PyNewFocus.Errors import NFError
         
@@ -132,7 +163,11 @@ class TunableLaser():
         self.Wavelength = Wavelength
 
 
-    def GetWavelength(self):      
+    def GetWavelength(self):
+        '''
+        Get wavelength of the New Focus TLS equipment
+        The return wavelength is expressed in nm
+        '''
         if not self.Simulation:
             Command = "WAV?\n"
             self.Send(Command)
@@ -142,6 +177,10 @@ class TunableLaser():
 
 
     def SetPower(self, Power):
+        '''
+        Set output power of the New Focus TLS equipment
+        Power is expressed in the unit defined by the GetUnit() method
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE, NF_TLS_PWMIN, NF_TLS_PWMAX
         from PyNewFocus.Errors import NFError
         
@@ -160,19 +199,32 @@ class TunableLaser():
             Command = "POW " + ("%2.2f" % Power).zfill(5) + self.Units[self.UnitIndex].upper() + "\n"
             self.Send(Command)
         
+        if self.UnitIndex == 1:
+            Power = self.ConvertToLog(Power)
         self.Power = Power
 
 
-    def GetPower(self):      
+    def GetPower(self):
+        '''
+        Get output power of the New Focus TLS equipment
+        The return power is expressed in the unit defined by the GetUnit() method
+        '''
         if not self.Simulation:
             Command = "POW?\n"
             self.Send(Command)
             self.Power = float(self.Receive()[:-1])
         
+        if self.UnitIndex == 1:
+            self.Power = self.ConvertToLin(self.Power)
+        
         return self.Power
 
 
     def SetUnit(self, Unit):
+        '''
+        Set the power unit of the New Focus TLS equipment
+        Unit is a string which could be "dBm" for logaritmic or "mW" for linear power
+        '''
         from PyNewFocus.Constants import NF_ERROR_ARGUMENT_TYPE, NF_ERROR_ARGUMENT_VALUE
         from PyNewFocus.Errors import NFError
         
@@ -190,7 +242,11 @@ class TunableLaser():
             self.Send(Command)
 
 
-    def GetUnit(self):      
+    def GetUnit(self):
+        '''
+        Get power unit of the New Focus TLS equipment
+        The return unit is a string
+        '''
         if not self.Simulation:
             Command = "POW:UNIT?\n"
             self.Send(Command)
@@ -200,6 +256,9 @@ class TunableLaser():
 
 
     def On(self):
+        '''
+        Activate the output power of the New Focus TLS equipment
+        '''
         self.UnLock()
         if not self.Simulation:
             Command = "OUTP 1\n"
@@ -209,6 +268,9 @@ class TunableLaser():
 
 
     def Off(self):
+        '''
+        Shut down the output power of the New Focus TLS equipment
+        '''
         if not self.Simulation:
             Command = "OUTP 0\n"
             self.Send(Command)
@@ -217,6 +279,9 @@ class TunableLaser():
 
 
     def GetStatus(self):
+        '''
+        Return the status ("ON" or "OFF") of the New Focus TLS equipment
+        '''
         if not self.Simulation:
             Command = "OUTP?\n"
             self.Send(Command)
@@ -226,12 +291,20 @@ class TunableLaser():
 
 
     def Lock(self):
+        '''
+        Lock the New Focus TLS equipment
+        This method is called by the 'Close' method of the TunableLaser class
+        '''
         if not self.Simulation:
             Command = "LOCK 1\n"
             self.Send(Command)
 
 
     def UnLock(self):
+        '''
+        Unlock the New Focus TLS equipment
+        This method is called by the constructor of TunableLaser class
+        '''
         if not self.Simulation:
             Command = "LOCK 0\n"
             self.Send(Command)
